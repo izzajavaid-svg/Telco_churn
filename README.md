@@ -290,3 +290,185 @@ The model also produced false positives for some short-tenure, month-to-month cu
 
 ---
 
+## Learning Curve and Bias/Variance Analysis
+
+Learning curves were generated using F1 score.
+
+At the largest training size:
+
+* Training F1 ≈ **0.5338**
+* Validation F1 ≈ **0.5331**
+
+The training and validation curves were very close, providing no strong evidence of overfitting.
+
+Both scores improved as more training data was added and then began to plateau around an F1 score of 0.53.
+
+This suggests that the model generalizes reasonably well, but the current feature set may be limiting further performance improvement.
+
+---
+
+## Decision Threshold Analysis
+
+Logistic Regression produces churn probabilities rather than only final class labels.
+
+The default threshold is:
+
+```text
+0.50
+```
+
+However, the best threshold depends on the business cost of false positives and false negatives.
+
+For this project, the business assumption was:
+
+> Missing a true churner is more expensive than contacting a customer who ultimately does not churn.
+
+Therefore, higher recall was prioritized.
+
+Several thresholds were evaluated.
+
+| Threshold |  Precision |     Recall |         F1 |
+| --------: | ---------: | ---------: | ---------: |
+|      0.20 |     0.4556 |     0.8636 |     0.5965 |
+|      0.25 |     0.4772 |     0.8102 |     0.6006 |
+|  **0.30** | **0.5091** | **0.7513** | **0.6069** |
+|      0.35 |     0.5277 |     0.6872 |     0.5970 |
+|      0.40 |     0.5502 |     0.6150 |     0.5808 |
+|      0.45 |     0.5879 |     0.5455 |     0.5659 |
+|      0.50 |     0.6464 |     0.4545 |     0.5338 |
+|      0.55 |     0.6959 |     0.3610 |     0.4754 |
+|      0.60 |     0.7448 |     0.2888 |     0.4162 |
+
+A threshold of **0.30** was selected because it substantially increased recall while also producing the highest F1 score among the tested thresholds.
+
+---
+
+## Final Test Results
+
+Using a decision threshold of **0.30**, the final model achieved:
+
+| Metric    |      Score |
+| --------- | ---------: |
+| Precision | **0.5091** |
+| Recall    | **0.7513** |
+| F1 Score  | **0.6069** |
+| PR-AUC    | **0.6379** |
+
+### Confusion Matrix
+
+```text
+[[764 271]
+ [ 93 281]]
+```
+
+This corresponds to:
+
+* **TN:** 764
+* **FP:** 271
+* **FN:** 93
+* **TP:** 281
+
+The model correctly identified **281 of 374 actual churners**, resulting in a churn recall of approximately **75.1%**.
+
+The trade-off is that 271 non-churners were also incorrectly flagged as potential churners.
+
+---
+
+## Key Findings
+
+1. A simple numerical Logistic Regression baseline achieved approximately **0.49 churn F1** at the default threshold.
+2. Feature engineering improved churn F1 to approximately **0.53** at the default threshold.
+3. Cross-validation produced a mean F1 of approximately **0.52 ± 0.03**.
+4. Learning curves showed no strong evidence of overfitting.
+5. Lowering the classification threshold increased churn recall substantially.
+6. A threshold of **0.30** produced:
+
+   * **75.13% recall**
+   * **50.91% precision**
+   * **60.69% F1**
+   * **63.79% PR-AUC**
+7. The main model weakness is false negatives among customers whose observed features make them appear low-risk.
+
+---
+
+## Production Monitoring
+
+If this model were deployed in production, monitoring would be important.
+
+Potential monitoring areas include:
+
+### Input Data Drift
+
+Monitor changes in:
+
+* `tenure`
+* `MonthlyCharges`
+* `TotalCharges`
+* `Contract`
+* Other important customer characteristics
+
+### Prediction Drift
+
+Monitor whether the distribution of predicted churn probabilities changes significantly over time.
+
+### Model Performance
+
+Once actual churn outcomes become available, monitor:
+
+* Precision
+* Recall
+* F1
+* False-negative rate
+* PR-AUC
+
+A significant deterioration could indicate that customer behavior has changed and the model needs to be retrained.
+
+---
+
+## Limitations
+
+The final model uses a relatively small set of features and Logistic Regression, which provides a simple and interpretable baseline but may not capture complex non-linear relationships.
+
+The threshold was selected based on the stated business assumption that false negatives are more costly than false positives.
+
+Further improvements could include:
+
+* Adding additional relevant customer features
+* Testing different regularization strengths
+* Treating tenure buckets as categorical features
+* Testing non-linear models
+* Using a dedicated validation set for threshold selection
+* Monitoring model performance after deployment
+
+---
+
+## Technologies Used
+
+* Python
+* Pandas
+* NumPy
+* Matplotlib
+* Scikit-learn
+* Jupyter / Google Colab
+
+---
+
+## Project Structure
+
+```text
+Telco_churn/
+│
+├── Telco_Customer_Churn.csv
+├── telco_churn.ipynb
+└── README.md
+```
+
+---
+
+## Conclusion
+
+This project demonstrates a complete supervised learning workflow for customer churn prediction.
+
+The final Logistic Regression model prioritizes recall because the business assumption makes missed churners more costly than unnecessary retention outreach. With a threshold of 0.30, the model identifies approximately 75% of actual churners while achieving an F1 score of 0.6069 and PR-AUC of 0.6379.
+
+The results show that basic feature engineering and threshold selection can meaningfully improve a simple Logistic Regression model, while the error analysis and learning curves highlight areas for future improvement.
